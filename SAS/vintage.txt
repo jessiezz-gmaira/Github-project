@@ -1,0 +1,211 @@
+
+
+%let today = "%sysfunc(today(),date9.)"d; %put &today; 
+%let CurrentMonthEnd = "%sysfunc(intnx(month,%sysfunc(intnx(day,&Today.,-1)),0,end),date9.)"d; %put &CurrentMonthEnd;
+%let mob6end = "%sysfunc(intnx(month,&CurrentMonthEnd,-6,end),date9.)"d; %put &mob6end;
+%let mob6start = "%sysfunc(intnx(month,&CurrentMonthEnd,-21,beginning),date9.)"d; %put &mob6start;
+
+
+
+proc sql;
+create table sixtyplus as
+select a. creditaccountid, a. reservationnumber as requestnumber, a. chargeoffindicator, a.activeaccountindicator,
+	a. monthsonbooks, b. statusreasoncode, a. bucket5count, a. bucket30count, a. bucket60count, 
+a. bucket90count, a. bucket120count, a. bucket150count, a.delinquentcount, a. chargeoffindicator, f. externalstatuscode
+from newdw.factfinancialmonthly a, newdw.dimstatusreason b,  newdw.dimexternalstatus f
+where a.reportingdate ge &mob6start and a. opendate ge &mob6start 
+	and a. monthsonbooks = 6 and a. dimstatusreasonid = b. dimstatusreasonid and a. dimexternalstatusid = f. dimexternalstatusid;
+quit;
+
+proc sort data=sixtyplus nodupkey;
+by creditaccountid;
+run;
+
+proc sort data=rankeddate nodupkey;
+by CreditAccountID;
+run;
+
+data rankeddate4;
+set rankeddate;
+where datepart(boarddate) ge &mob6start and datepart(boarddate) le &mob6end;
+run;
+
+data b;
+merge rankeddate4 (in=a) sixtyplus;
+by creditaccountid;
+if a;
+run;
+
+data bb;
+set b;
+if (bucket60count=1 or bucket90count=1 or bucket120count=1 or bucket150count=1) then sixtyplus = 1; 
+else sixtyplus = 0;
+run;
+
+
+/*************** level 2 **************************/
+proc sql;
+create table rollup2 as
+select 
+	vintage,
+	Level2 as Source,
+	quantile,
+	sum(activeaccountindicator) as boards,
+	sum(sixtyplus) as sixtyplus
+from 
+	bb
+group by 
+ vintage,
+	Level2,
+	quantile;
+quit;
+
+data Final602;
+Set rollup2;
+SixtyRate = sixtyplus/boards;
+run;
+
+
+/*************** level 3 **************************/
+
+proc sql;
+create table rollup3 as
+select 
+	vintage,
+	Level3 as Source,
+	quantile,
+	sum(activeaccountindicator) as boards,
+	sum(sixtyplus) as sixtyplus
+from 
+	bb
+group by 
+ vintage,
+	Level3,
+	quantile;
+quit;
+
+data Final603;
+Set rollup3;
+SixtyRate = sixtyplus/boards;
+run;
+
+
+
+/*************** level 2.2 **************************/
+proc sql;
+create table rollup22 as
+select 
+	vintage,
+	Level22 as Source,
+	quantile,
+	sum(activeaccountindicator) as boards,
+	sum(sixtyplus) as sixtyplus
+from 
+	bb
+group by 
+ vintage,
+	Level22,
+	quantile;
+quit;
+
+data Final6022;
+Set rollup22;
+SixtyRate = sixtyplus/boards;
+run;
+
+
+
+/*************** level 1 **************************/
+data rankeddate4;
+set Finalrankeddatelev1;
+where datepart(boarddate) ge &mob6start and datepart(boarddate) le &mob6end;
+run;
+proc sort data=rankeddate4;
+by creditaccountid;
+run;
+data b;
+merge rankeddate4 (in=a) sixtyplus;
+by creditaccountid;
+if a;
+run;
+
+data bb;
+set b;
+if (bucket60count=1 or bucket90count=1 or bucket120count=1 or bucket150count=1) then sixtyplus = 1; 
+else sixtyplus = 0;
+run;
+
+proc sql;
+create table rollup1 as
+select 
+	vintage,
+	Level1 as Source,
+	quantile,
+	sum(activeaccountindicator) as boards,
+	sum(sixtyplus) as sixtyplus
+from 
+	bb
+group by 
+ vintage,
+	Level1,
+	quantile;
+quit;
+
+data Final601;
+Set rollup1;
+SixtyRate = sixtyplus/boards;
+run;
+
+
+
+
+
+
+
+data Final60Data;
+set 
+Final601
+Final602
+Final603
+Final6022;
+run;
+
+
+proc sql;
+create table Final60Data2 as
+select 
+	vintage,
+	Source,
+	quantile,
+	boards as Count,
+	sixtyplus as Boards,
+	SixtyRate as sixtyplusrate
+from 
+	Final60Data;
+quit;
+
+
+proc import 
+datafile= "/sasdata/windows/fnbmcorp/Risk/Acquisitions/Underwriting Reporting/SAS/Loss Reporting by Quantile/Labels.xlsx"
+OUT = work.Labels
+DBMS = xlsx 
+replace;
+quit;
+
+PROC SQL;
+CREATE TABLE Final60Data22 AS
+SELECT A.*, B.Segment
+FROM Final60Data2 A LEFT JOIN Labels B
+ON A.Source = B.Level;
+QUIT;
+
+
+/******* BOOM / EXPORT ************/
+proc export data=Final60Data22
+dbms=xlsx  
+outfile=  "/sasdata/windows/fnbmcorp/Risk/Acquisitions/Underwriting Reporting/Old Versions/TEST/Loss Reporting by Fixed ScoreTEST.xlsx"
+replace;
+sheet= "60Plus Data";
+quit;
+
+

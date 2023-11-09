@@ -1,0 +1,63 @@
+%include "/sasdata/area51/fnbmcorp/CustomerService/HighRoller/CS Reporting Analytics/SASMacros/mainPres.sas";
+libname out "/sasdata/area51/fnbmcorp/CustomerService/HighRoller/CS Reporting Analytics/Presidential";
+
+%let out = /sasdata/area51/fnbmcorp/CustomerService/HighRoller/CS Reporting Analytics/Presidential;
+
+%let Mstart=%sysfunc(intnx(month,%sysfunc(today()),0,b),date9.);
+%let Wstart=%sysfunc(intnx(week,%sysfunc(today()),0,b),date9.);
+%let DayAgo=%sysfunc(intnx(weekday,%sysfunc(today()),-1,b),date9.);
+
+%put &=Mstart  &=DayAgo;
+
+Proc sql;
+Create table Pres as 
+
+SELECT  FileNumber	  , Agency	  , FileType
+	  ,datepart(ReceivedDate) as CaseRecievedDate format date9.
+	  , datepart(sentletterdate) as CloseDt format date9.
+	  ,CASE WHEN datepart(SentLetterDate) = '01JAN1900'd THEN 1 ELSE 0 END as CaseOpen  
+ 	,CASE WHEN Agency = 'Exec Email' THEN 'Contact' 
+		WHEN Agency = 'Exec Voice Mail' THEN 'Contact' ELSE 'Case' END as CaseOrContact
+	 ,CASE WHEN datepart(SentLetterDate) = '01JAN1900'd THEN 1 ELSE 0 END as CaseOpen  
+	 , case when calculated CaseOpen = 0 then
+		intck('BankingDays',datepart(ReceivedDate),datepart(SentLetterDate)) end as cycletime
+	 , case when  datepart(ReceivedDate) = "&DayAgo."d then 1 end as OpenY
+	 , case when datepart(SentLetterDate) = "&DayAgo."d then 1 end as ClosedY
+	 , case when  datepart(ReceivedDate) >= "&Wstart."d then 1 end as OpenWTD
+	 , case when datepart(SentLetterDate) >= "&Wstart."d then 1 end as ClosedWTD
+	 , case when  datepart(ReceivedDate) >= "&Mstart."d then 1 end as OpenMTD
+	 , case when datepart(SentLetterDate) >= "&Mstart."d then 1 end as ClosedMTD
+
+  FROM  NEWDW.FactPresidentialContacts  A  
+  INNER JOIN NEWDW.dimPCCustomer  B   ON A. dimPCCustomerId  = B. dimPCCustomerId 
+  INNER JOIN NEWDW.dimPCAgency  C    ON A. dimPCAgencyId  = C. dimPCAgencyId 
+  INNER JOIN NEWDW.dimPCFileType  D    ON A. dimPCFileTypeId  = D. dimPCFileTypeId 
+
+where datepart(a.ReceivedDate) >= "&start."d
+/*and filenumber = '20210104003'*/
+
+; quit;
+
+proc sort data=Pres nodup;
+by filenumber CaseRecievedDate;
+run;
+/*enables Tableau workbook*/
+data Tab.MIS;
+set Pres;
+run;
+/**/
+/*proc sql;*/
+/*create table final as*/
+/*select CaseOrContact, sum(caseopen) as WIP, sum(openY) as OpenY, sum(closedY) as ClosedY,*/
+/*sum(openWTD) as openwtd, sum(closedwtd) as closedWTD, sum(openMTD) as openMTD,*/
+/*sum(closedMTD) as closedMTD*/
+/**/
+/*from Pres*/
+/*group by CaseOrContact*/
+/*; quit;*/
+/**/
+/*proc export data=final*/
+/*	outfile= "&out/NewCases2.xlsx"*/
+/*	dbms=XLSX replace;*/
+/*run;*/
+

@@ -1,0 +1,96 @@
+%include "/sasdata/area51/fnbmcorp/CustomerService/HighRoller/CS Reporting Analytics/SASMacros/mainInit.sas";
+%include "&dirHighroller./CS Reporting Analytics/ACDVs/SASPrograms/ACDVMacros.sas";
+
+data work.acdvset;
+    format ResponseDate mmddyy10.  ReceiveDate mmddyy10. DueDate mmddyy10. CycleTimeByRec 8. CycleTimeBySub 8. WkYr mmddyy10.;
+    set acdvdata.acdv;
+    where (responsedatetime between "01Jan2021:00:00:00"dt and "31Dec2021:23:59:59"dt)
+        or (responsedatetime = . and dateresponsedue between "01Jan2021:00:00:00"dt and "31Dec2021:23:59:59"dt)
+    ;
+    ReceiveDate = datepart(ReceivedDateTime);
+    DueDate = datepart(DateResponseDue);
+    if responsedatetime = . then do;
+        WkYr = intnx("day",DueDate,0,"BEGINNING");
+        CycleTimeByRec = 31;
+        CycleTimeBySub = 31;
+        Agency = "DID NOT RESPOND";
+    end;
+    else do;
+        ResponseDate = datepart(responsedatetime);
+        WkYr = intnx("day",ResponseDate,0,"BEGINNING");
+        CycleTimeByRec = intck("day", ReceiveDate, ResponseDate);
+        CycleTimeBySub = intck("day", DueDate, ResponseDate) + 30;
+    end;
+run;
+
+proc sql;
+	create table Work.ProcessedCount
+	as
+
+    select agency, CycleTimeByRec, CycleTimeBySub, WkYr, count(*) As Procd
+    from work.acdvset
+    where queue not like "Fraud%"
+    and agency NE "iQor"
+    group by agency, CycleTimeByRec, CycleTimeBySub, WkYr
+
+    union all
+
+    select "Fraud" As Agency, CycleTimeByRec, CycleTimeBySub, WkYr, count(*) As Procd
+    from work.acdvset
+    where queue like "Fraud%"
+    or agency = "iQor"
+    group by CycleTimeByRec, CycleTimeBySub, WkYr
+    ;
+quit;
+
+data work.ProcessedCount;
+	set work.ProcessedCount;
+	where WkYr LT today();
+	format Team $50.;
+	if Agency = "C1B" then Team = "C1B";
+	else If Agency = "Bot" then Team = "Bot";
+	else if Agency = "Fraud" then Team = "Fraud";
+	else Team = "Partner";
+run;
+
+proc sql;
+	select team, WkYr, sum(Procd) AS Responded
+	from Work.ProcessedCount
+	group by team, WkYr
+	order by team, WkYr
+;
+quit;
+
+proc summary data=work.processedcount;
+var Procd;
+class Team WkYr;
+output out=work.ProcPivotPre sum=;
+run;
+
+data work.ProcPivotPre;
+	set work.ProcPivotPre;
+	where WkYr NE .;
+run;
+
+proc sort data=work.ProcPivotPre out=work.ProcPivotPre;
+	by WkYr team;
+run;
+
+proc transpose data=work.ProcPivotPre out=work.ProcPivot(drop=_name_);
+	by WkYr;
+	var Procd;
+	id Team;
+	idlabel Team;
+run;
+
+data work.ProcPivot;
+	Retain WkYr C1B Bot Partner NonFraudTotal x Fraud;
+	set work.ProcPivot;
+	NonFraudTotal = C1B + Bot + Partner;
+	x = .;
+run;
+
+
+
+
+%include "&dirHighroller./CS Reporting Analytics/SASMacros/mainTerm.sas";

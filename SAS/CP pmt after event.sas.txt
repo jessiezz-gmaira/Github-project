@@ -1,0 +1,42 @@
+select 
+ FE.CreditAccountId			
+,FE.CardID
+,CN.LASTNAME 
+,CN.FIRSTNAME
+,FF.ReportingDate AS "ReportingDate"
+,FE.BenefitEligibilityDateforLossofLife
+,FF.DateLastPayment  
+,TC.TranCode
+
+
+		 FROM CPC1B.FactEnrollment FE 
+
+		INNER JOIN CPC1B.FactCPCardMembers CM 
+			ON FE.CreditAccountId= CM.CreditAccountId
+			AND FE.CardID = CM.CardID 
+
+		INNER JOIN CPC1B.dimCPCustomerName CN 
+			ON CM.dimCPCustomerNameID=CN.dimCPCustomerNameID 
+			AND CM.CustomerID = CN.CustomerID
+
+		INNER JOIN  NEWDW.FactFinancial  FF 
+		  ON FE.CreditAccountId=FF.CreditAccountID
+		  AND FE.CardID=FF.CardID
+
+		INNER JOIN CPC1B.FactBenefit FB
+		  ON FE.EnrollmentConfNum = FB.EnrollmentConfNum
+		  AND FE.CreditAccountID = FB.CreditAccountID
+		  AND FE.CardID = FB.CardID
+
+		INNER JOIN CPC1B.dimBenefitType BT
+		  ON BT.dimBenefitTypeID = FB.dimBenefitTypeID
+
+		INNER JOIN NEWDW.FactTransaction FT
+		  ON FE.CreditAccountId=FT.CreditAccountId
+		  AND FE.CardID=FT.CardID
+
+		INNER JOIN NEWDW.dimTransactionCategory TC
+		  ON FT.dimTransactionCategoryID=TC.dimTransactionCategoryID
+
+		INNER JOIN NEWDW.dimExternalStatus EXS
+    	  ON EXS.dimExternalStatusID = FF.dimExternalStatusID

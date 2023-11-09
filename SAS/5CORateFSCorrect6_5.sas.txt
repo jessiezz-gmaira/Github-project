@@ -1,0 +1,116 @@
+*Cuml 12m Dollar Loss;
+
+
+%let today = "%sysfunc(today(),date9.)"d; %put &today; 
+%let CurrentMonthEnd = "%sysfunc(intnx(month,%sysfunc(intnx(day,&Today.,-1)),0,end),date9.)"d; %put &CurrentMonthEnd;
+%let coend = "%sysfunc(intnx(month,&CurrentMonthEnd,-13,end),date9.)"d; %put &coend;
+%let costart = "%sysfunc(intnx(month,&CurrentMonthEnd,-28,beginning),date9.)"d; %put &costart;
+
+
+proc sql;
+create table co as
+select a. creditaccountid, a. reservationnumber as requestnumber, a. chargeoffindicator,
+	a. monthsonbooks, b. statusreasoncode, a. chargeoffprincipalamount, a.currentmonthunwindindicator
+from newdw.factfinancialmonthly a, newdw.dimstatusreason b
+where a. reportingdate ge &costart and a. opendate ge &costart and a. opendate le &coend and (a. chargeoffindicator = 1 or a.currentmonthunwindindicator = 1)
+	and a. monthsonbooks le 12 and a. dimstatusreasonid = b. dimstatusreasonid
+	and b. statusreasoncode not in (52,88);
+quit;
+
+proc sort data=co nodupkey;
+by creditaccountid;
+run;
+
+proc sort data=rankeddate nodupkey;
+by CreditAccountID;
+run;
+
+
+data rankeddate5;
+set rankeddate;
+where datepart(boarddate) ge &costart and datepart(boarddate) le &coend;
+run;
+
+data b;
+merge rankeddate5 (in=a) co;
+by creditaccountid;
+if a;
+run;
+
+data bb;
+set b;
+if chargeoffindicator = 1 then CO = 1;
+else co = 0;
+run;
+
+
+/*********************** LEVEL 3 ************************************/
+
+proc sql;
+create table rollup3 as
+select 
+	vintage,
+	Level3,
+	quantile,
+	count(*) as boards,
+	sum(CO) as COcount,
+	sum(currentmonthunwindindicator) as unwind
+from 
+	bb
+group by 
+ vintage,
+	Level3,
+	quantile;
+quit;
+
+data FinalCO3;
+Set rollup3;
+coRate = COcount/(boards - unwind);
+boards2 = (boards - unwind);
+drop unwind;
+run;
+
+data AFinalCO3;
+Set FinalCO3;
+if missing(coRate) then  coRate = 0;
+run;
+
+
+
+proc sql;
+create table FinalCO3 as
+select a. *,
+b.Srange
+from AFinalCO3 a left join ScoreRangesL3 b
+ on a. quantile = b.quantile and a.Level3 = b.Level3;
+quit;
+
+data FinalCO3;
+Set FinalCO3;
+if missing(CORate) then  CORate = 0;
+run;
+
+
+proc import 
+datafile= "/sasdata/windows/fnbmcorp/Risk/Acquisitions/Underwriting Reporting/SAS/Loss Reporting by Quantile/Labels.xlsx"
+OUT = work.Labels
+DBMS = xlsx 
+replace;
+quit;
+
+PROC SQL;
+CREATE TABLE FinalCOData22 AS
+SELECT A.*, B.Segment
+FROM FinalCO3 A LEFT JOIN Labels B
+ON A.Level3 = B.Level;
+QUIT;
+
+
+
+
+proc export data=FinalCOData22
+dbms=xlsx  
+outfile=  "/sasdata/windows/fnbmcorp/Risk/Acquisitions/Underwriting Reporting/Old Versions/TEST/Loss Reporting by Fixed ScoreTEST.xlsx"
+replace;
+sheet= "COrate Data";
+quit;
