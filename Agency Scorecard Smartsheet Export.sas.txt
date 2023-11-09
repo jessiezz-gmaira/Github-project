@@ -1,0 +1,140 @@
+options  mprint mlogic;
+/*symbolgen */
+%let token=mjikvfudce0i4ct9cn2xqigq6t;
+%let path=/sasdata/area51/fnbmcorp/CustomerService/HighRoller/CS Reporting Analytics/Quality/Smartsheets;
+
+
+data files;
+	infile datalines;
+	length id $20;
+	input  id $;
+	datalines;
+5424839109437316
+871262957397892
+3012545847027588
+2027331888932740
+724135732111236
+2940115518547844
+6815907830884228
+;
+
+data titles;
+	infile datalines;
+	length name $60;
+	input   name $;
+	datalines;
+Disputes
+ProcessReview
+Collections
+CS(Phones)
+Fraud
+BackOffice
+tracker
+;
+
+proc sql noprint;
+	select count(distinct id) into : nfiles
+		from files;
+quit;
+
+%macro first(data);
+%let count =;
+	%do count = 1 %to &nfiles;
+	%put &=count;
+
+		data _null_;
+			set &data end=end;
+
+			if _n_=&count.;
+			call symput("id", id);
+		run;
+%put &=id;
+
+
+filename out&count "/sasdata/area51/fnbmcorp/CustomerService/HighRoller/CS Reporting Analytics/Quality/Smartsheets/file&count..json";
+
+	proc http
+			url="https://api.smartsheet.com/2.0/sheets/&id."
+			OAUTH_BEARER="&token."
+			method="GET"
+			out=out&count;
+			headers "Accept"="application/json";
+/*			DEBUG level=3;*/
+		
+		run;
+
+	%end;
+%mend first;
+
+%first(files);
+
+libname data1 json fileref=out1;
+libname data2 json fileref=out2;
+libname data3 json fileref=out3;
+libname data4 json fileref=out4;
+libname data5 json fileref=out5;
+libname data6 json fileref=out6;
+libname data7 json fileref=out7;
+
+			proc transpose data=ROWS_CELLS1 out=temp1;
+			by ordinal_rows;
+			var value;
+			run;
+
+%macro loop();
+
+%let i =;
+	%do i = 1 %to &nfiles;
+
+		data rows_cells&i;
+			set data&i..rows_cells;
+		run;
+
+		data columns&i.;
+			set data&i..columns;
+		run;
+		
+
+			proc transpose data=ROWS_CELLS&i out=temp&i;
+			by ordinal_rows;
+			var value;
+			run;
+			
+			proc sql;
+			create table a&i as
+			select compress(upcase(translate(trim(title),"_"," ")), "#:?/") as new_name
+			from columns&i;
+			quit;
+			
+			proc transpose data=a&i out=b&i;
+			var new_name;
+			run;
+			
+			data Final&i;
+			set b&i (drop=_name_) temp&i (drop=_name_ ordinal_rows);
+			run;
+
+			%end;
+%mend loop;
+
+%loop();
+
+%macro last;
+
+%DO cnt = 1 %to &nfiles;
+
+		data _null_;
+			set titles end=end;
+
+			if _n_=&cnt.;
+			call symput("title", name);
+		run;
+%put &=title;
+
+proc export data=Final&cnt. dbms=XLSX outfile= "&path./&title..xlsx"
+replace;
+run;
+
+%end;
+%mend last;
+%last;

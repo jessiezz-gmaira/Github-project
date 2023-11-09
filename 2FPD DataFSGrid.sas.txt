@@ -1,0 +1,177 @@
+
+%let today = "%sysfunc(today(),date9.)"d; %put &today; 
+%let CurrentMonthEnd = "%sysfunc(intnx(month,%sysfunc(intnx(day,&Today.,-1)),0,end),date9.)"d; %put &CurrentMonthEnd;
+%let fpdend = "%sysfunc(intnx(month,&CurrentMonthEnd,-1,end),date9.)"d; %put &fpdend;
+%let fpdstart = "%sysfunc(intnx(month,&CurrentMonthEnd,-16,beginning),date9.)"d; %put &fpdstart;
+
+
+
+/************************* Uses Luke's FPD Logic ********************************/
+
+
+proc sql;
+create table cycle as
+select 
+	a. creditaccountid,
+	a.reservationnumber, 
+	a. dimbucketid as bucket, 
+	a. monthsonbooks, 
+	b. billingcycle, 
+	a. opendate,
+	intnx ('month',datepart(a. opendate),0,'e') as openmonthend format date9.,
+	a. datelaststatement,
+	c. externalstatuscode,
+	c. externalstatusdescription,
+	d. statusreasoncode,
+	d. statusreasoncodedescription
+	
+from 
+	newdw.factfinancialcyclev2 a, 
+	newdw.dimbillingcycle b,
+	newdw.dimexternalstatus c,
+	newdw.dimstatusreason d
+where 
+	&fpdstart. le a. opendate le &fpdend. 
+    and a. dimbillingcycleid = b. dimbillingcycleid 
+	and a. monthsonbooks le 3
+	and a.dimexternalstatusid=c.dimexternalstatusid
+	and a.dimstatusreasonid = d.dimstatusreasonid;
+quit;
+
+
+data cycle2;
+set cycle;
+if externalstatuscode in ("L","U") then delete;
+open_dayofmonth=day(datepart(opendate));
+run;
+
+data fpd;
+set cycle2;
+%FPD;
+run;
+
+proc sort data=fpd;
+by creditaccountid descending bucket;
+run;
+
+proc sort data=fpd nodupkey;
+by creditaccountid;
+run;
+
+data fpd;
+set fpd;
+if bucket gt 0 then fpd=1;
+else fpd=0;
+run;
+
+data fpd_final;
+set fpd;
+keep CreditAccountID reservationnumber fpd;
+run;
+
+
+/************************* Use Macros for date range of quantiled data ********************************/
+data rankeddate11;
+set rankeddate;
+where  &fpdstart le datepart(boarddate) le &fpdend;
+run;
+
+proc sort data=rankeddate11;
+by CreditAccountID;
+run;
+
+data boardsA;
+merge rankeddate11 (in=a) fpd_final;
+by creditaccountid;
+if a;
+
+if missing(fpd) then Cycled = 0;
+else Cycled = 1;
+run;
+
+/************************ level 3 *********************************/
+
+proc sql;
+create table rollup3 as
+select 
+	vintage,
+	Level3,
+	quantile,
+	sum(cycled) as cycled,
+	sum(fpd) as fpd
+from 
+	boardsA
+group by 
+ vintage,
+	Level3,
+	quantile;
+quit;
+
+data FinalFPD3;
+Set rollup3;
+FPDrate = fpd/cycled;
+Boards = cycled;
+if missing(FPDrate) then FPDrate = 0;
+if Level3 = "." then delete;
+run;
+proc sql;
+create table FinalFPD33 as
+select a. *,
+b.Srange
+from FinalFPD3 a left join ScoreRangesL3 b
+ on a. quantile = b.quantile and a.Level3 = b.Level3;
+quit;
+
+
+
+/******* Importing the full name of the segments and joining because i was too lazy to type them in my code when i made the pivot tables ************/
+proc import 
+datafile= "/sasdata/windows/fnbmcorp/Risk/Acquisitions/Underwriting Reporting/SAS/Loss Reporting by Quantile/Labels.xlsx"
+OUT = work.Labels
+DBMS = xlsx 
+replace;
+quit;
+
+PROC SQL;
+CREATE TABLE FinalFinalFPD33 AS
+SELECT A.*, B.Segment
+FROM FinalFPD33 A LEFT JOIN Labels B
+ON A.Level3 = B.Level;
+QUIT;
+
+/******* BOOM / EXPORT ************/
+proc export data=FinalFPD33
+dbms=xlsx  
+outfile=  "/sasdata/windows/fnbmcorp/Risk/Acquisitions/Underwriting Reporting/Old Versions/TEST/Loss Reporting by Fixed ScoreTEST.xlsx"
+replace;
+sheet= "FPDData2";
+quit;
+
+
+
+
+proc sql outobs=20;
+create table VintageCycled as
+select
+	vintage,
+	sum(cycled) as cycled,
+	count(*) as Boards,
+	case when sum(cycled)/count(*)>=.97 then 1.00 else sum(cycled)/count(*) end as CycleRate
+from
+	boardsA
+group by
+	vintage
+having
+	(calculated CycleRate) >= .1
+order by
+	vintage desc
+;quit;
+
+/****use cycled number for boards number *****/
+
+proc export data=VintageCycled
+dbms=xlsx  
+outfile=  "/sasdata/windows/fnbmcorp/Risk/Acquisitions/Underwriting Reporting/Old Versions/TEST/Loss Reporting by Fixed ScoreTEST.xlsx"
+replace;
+sheet= "CycledData";
+quit;

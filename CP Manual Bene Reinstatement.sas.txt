@@ -1,0 +1,24 @@
+
+proc sql;
+select memname from dictionary.columns
+where upcase(name) = 'DIMREINSTATEBENEFITMANUALID' 
+and upcase(libname) = 'NEWDW'
+; quit;
+
+proc sql;
+select memname from dictionary.columns
+where upcase(name) = 'DIMREINSTATEBENEFITMANUALID' 
+and upcase(libname) = 'CPC1B'
+; quit;
+
+proc sql inobs=10;
+select creditaccountid, cardid, benefitstartdate, BenefitEndDate, BenefitCaseNum, EventNotificationDate,
+ReinstateBenefitDate, ReinstateBenefitFormRcvDate, ReinstateBenefitFormRqstDate,
+ReinstateBenefitManual
+
+from cpc1b.factbenefit a
+inner join cpc1b.DIMREINSTATEBENEFITMANUAL b
+on a.DIMREINSTATEBENEFITMANUALID = b.DIMREINSTATEBENEFITMANUALID
+
+where month(datepart(reportingdate)) = 12;
+quit;

@@ -1,0 +1,197 @@
+
+DATA boards25;
+SET boards2b;
+
+if offer = "Second Account" then delete;
+
+if missing(webchannel) then source1 = source;
+else source1 = webchannel;
+
+if Source = "None" and sourceoriginal = "PADM" then Source = "VS550";
+if Source = "None" and mARKETINGTYPE = "Direct Mail" then Source = "VS550";
+if missing(reservationnumber) then delete;
+
+if substr(reservationnumber,1,4) in ("SL21", "SJ21","SK21") then Source1 = "RTR18";
+if substr(reservationnumber,1,4) in ("KF17") then Source1 = "CLM18";
+
+
+If fee = "$75" then SegmentType = "Core";
+else if fee = "$0" then SegmentType = "Prime";
+else SegmentType = "Expansion";
+
+drop vintage;
+run;
+
+/****************************************Using Level 1,2,22,3 as Rollup Variables************************************************/
+DATA boards252;
+SET boards25;
+format vintage date9.;
+format Level3 $30.;
+vintage = intnx('month',datepart(boarddate),0,'beginning');
+Level3Orig = Cats("Level3 - ",source1);
+if not missing(webchannel) and bureaumodelscoredescription = "Experian CRS09" then Level3Orig = "Level3 - Web Prime";
+drop targeted subchannel Acquisitions app_target Branding targeted Bureau_Model_Code channel Campcode CampaignCode CampaignScoreSegment;
+run;
+
+
+proc sort data=boards252 nodupkey;
+by CreditAccountID;
+run;
+proc sort data=boards252;
+by Level3Orig ;
+run;
+
+/************************* Breaking out segments based on the custom score that is used for ranking ********************************/
+data EMCON; set boards252;
+where source1 ="EMCS"; 
+if source1 in ("CLM18") then delete;
+QScore = evsprescreen;
+Level3 = Level3Orig;
+run;
+
+data Digital14; set boards252;
+where BureauModelScoreDescription = "Experian WRS14"; 
+Level3 = Cats(Level3Orig," WRS14");
+QScore =  crsscore ;
+run;
+
+data Digital18; set boards252;
+where BureauModelScoreDescription = "Experian WRS18"; 
+Level3 = Cats(Level3Orig," WRS18");
+QScore =  crsscore ;
+run;
+
+data DigitalPrime; set boards252;
+where not missing(webchannel) and bureaumodelscoredescription = "Experian CRS09"; 
+Level3 = "Level3 - Web Prime"; 
+QScore = crsscore  ;
+run;
+
+data DirectMail14; set boards252;
+where bureaumodelscoredescription in ("Experian CRS14", "Equifax Vantage 3.0");
+if source1 in ("EMCS","RTR18","CLM18") then delete;
+Level3 = Cats(Level3Orig," CRS14");
+QScore =  crs14prescreen ;
+run;
+
+data EfxDirectMail09;
+set boards252;
+where bureaumodelscoredescription = "Equifax CRS09"; 
+Level3 = Cats(Level3Orig," CRS09");
+QScore =  crs09prescreen ;
+run;
+/*data EfxDirectMail18;*/
+/*set boards252;*/
+/*where bureaumodelscoredescription = "ERS18"; run;*/
+
+data ExpDirectMail09; set boards252;
+where bureaumodelscoredescription = "Experian CRS09";
+if source1 in ("EMCS","RTR18","CLM18") then delete;
+QScore =   crs09prescreen;
+Level3 = Level3Orig;
+run;
+
+data DirectMail18; set boards252;
+where bureaumodelscoredescription in ("Experian CRS18");
+if source1 in ("EMCS","RTR18","CLM18") then delete;
+Level3 = Cats(Level3Orig," CRS18");
+QScore =  crs18prescreen ;
+run;
+/**/
+/*data NoScores; set boards252;*/
+/*where source1 in ("RTR18","CLM18") or bureaumodelscoredescription = "ERS18";*/
+/*Level3 = Cats(Level3Orig," ERS18");*/
+/*QScore =  0 ;*/
+/*run;*/
+
+
+proc sort data=Digital14; by Level3; run;
+proc sort data=EMCON; by Level3; run;
+proc sort data=Digital18; by Level3; run;
+proc sort data=DigitalPrime; by Level3; run;
+proc sort data=EfxDirectMail09; by Level3; run;
+proc sort data=DirectMail14; by Level3; run;
+proc sort data=ExpDirectMail09; by Level3; run;
+proc sort data=DirectMail18; by Level3; run;
+/*proc sort data=NoScores; by Level3; run;*/
+
+
+
+
+/************************* Creating quantiles, 5 for EC and 20 for all else ********************************/
+proc rank data=EMCON out=ECrankeddate groups=5;
+	var QScore;
+	ranks quantile;
+	by  Level3 /*nontargeted_sources*/;
+quit;
+proc rank data=Digital14 out=digrankeddate groups=20;
+	var QScore;
+	ranks quantile;
+	by Level3;
+quit;
+proc rank data=Digital18 out=digrankeddate18 groups=20;
+	var QScore;
+	ranks quantile;
+	by Level3 ;
+quit;
+proc rank data=DigitalPrime out=digPRMrankeddate groups=20;
+	var QScore;
+	ranks quantile;
+	by Level3;
+quit;
+proc rank data=EfxDirectMail09 out=Efx09Ranked groups=20;
+	var QScore;
+	ranks quantile;
+	by Level3;
+quit;
+proc rank data=DirectMail14 out=dm14rankeddate groups=20;
+	var QScore;
+	ranks quantile;
+	by Level3;
+quit;
+proc rank data=ExpDirectMail09 out=dm09rankeddate groups=20;
+	var QScore;
+	ranks quantile;
+	by Level3 ;
+quit;
+proc rank data=DirectMail18 out=dm18rankeddate groups=20;
+	var QScore;
+	ranks quantile;
+	by Level3;
+quit;
+/*proc rank data=EfxDirectMail18 out=dmfx18rankeddate groups=20;*/
+/*	var crs18prescreen;*/
+/*	ranks quantile;*/
+/*	by vintage Source1 ;*/
+/*quit;*/
+
+
+/************************* Combining Dataset ********************************/
+data rankddate2;
+set digrankeddate dm14rankeddate dm09rankeddate digrankeddate18 ECrankeddate digPRMrankeddate dm18rankeddate Efx09Ranked  NoScores;
+/*dmfx18rankeddate*/
+run;
+
+proc sort data=rankddate2 nodupkey;
+by CreditAccountID;
+run;
+proc sort data=rankddate2;
+by vintage;
+run;
+
+data rankeddate;
+set rankddate2;
+quantile = quantile + 1;
+run;
+
+proc tabulate data=rankeddate out=ScoreRangesL2;
+var QScore;
+class level3 quantile;
+table level3 * quantile * QScore * (min max);
+run;
+data ScoreRangesL3;
+set ScoreRangesL2;
+Srange = cats(qscore_min,"-",qscore_max);
+run;
+
+

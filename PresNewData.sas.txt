@@ -1,0 +1,43 @@
+/**/
+/*three dimensions: dimPCAuditHistFieldName , dimPCAuditHistProcessDesc and dimPCCase*/
+/*New Fact tables: factPresidentialContactsAuditHistory and factPresidentialContactsHistory*/
+
+
+proc sql;
+select * from NEWDW.factPresidentialContactsHistory;
+where presaudithistoryid = 17586
+quit;
+
+/*PresContactHistoryID*/
+
+/*missing*/
+proc sql outobs=25;
+select * from NEWDW.factPCAuditHistory ;
+quit;
+
+
+proc sql outobs=25;
+select * from NEWDW.dimPCAuditHistFieldName;
+quit;
+
+/*only has update and initial creation*/
+proc sql outobs=25;
+select * from NEWDW.dimPCAuditHistProcessDesc;
+quit;
+
+
+proc sql outobs=25;
+select * from NEWDW.dimPCCase;
+quit;
+
+
+proc contents data=NEWDW.factPresidentialContactsHistory; run;
+
+proc contents data=NEWDW.factPCAuditHistory; run;
+
+proc contents data=NEWDW.dimPCAuditHistFieldName; run;
+
+proc contents data=NEWDW.dimPCAuditHistProcessDesc; run;
+
+proc contents data=NEWDW.dimPCCase; run;
+
