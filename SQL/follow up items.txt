@@ -1,0 +1,22 @@
+onboardnig materials
+
+https://www.snowflake.com/wp-content/uploads/2017/03/Understanding-Snowflake-Pricing-1Dec2016.pdf
+
+Connect Alteryx to Snowflake
+https://help.alteryx.com/snowflake#:~:text=%20Run%20The%20App%20%201%20Click%20Run,the%20URL%20for%20your%20Alteryx%20Connect...%20More%20
+
+
+
+kmeans(n_clusters = n_cluster, init = 'k-means++', random_state=42)
+
+PCA
+
+X = data
+pca = PCA(n_components=2, whiten=True).fit(X) ##whiten decorrelation and normalisation
+X_pca = pca.transform(X)
+
+print(pca.components_)
+print(pca.explained_variance_ratio_)
+print(sum(pca.explained_variance_ratio_))
+
+pd.set_option(display.float_format, "{:,.2f}".format)

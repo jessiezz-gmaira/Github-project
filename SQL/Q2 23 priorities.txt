@@ -1,0 +1,95 @@
+Business Intelligence projects Q2
+
+VOD strategy - what is meaningful
+value of VOD users
+reaction to Tubi surpassing Pluto
+can VOD exp be better?  sure
+avod exp has a home page destination
+SWAT team - low hanging fruit, fix the basics
+quality issues improvement
+id new features to become a consuming experience.
+end cards to make VOD a more passive experience
+timing with credits
+users will deliberately need to avoid going to next content
+swat is focusing on dominant platforms
+optimize monetization in VOD
+ad exp improvement in vod with countdown timer
+markers along vod
+find optimal mix between linear/vod
+tony simon may optimize optimal ad exp
+imp time to first frame 
+
+backlog of maintenance and new features
+quick releases in kanban style
+small agile team without other priorities
+
+
+registration
+a lot of eyes on first experiment of hard/soft wall
+understand level of impact biz can accept in order to get x% of users registration
+can't currently get logged in state
+modeling exercise of losses vs. increased usage
+golden state reg user that consumes a high octane state of ads - addressable
+what does addressable mean?
+can mean (in this context) can we monetize it?
+people who watch without getting to an ad break are not monetizable.
+
+was there an opportunity to monetize
+;
+4 topics
+1 - registration:  modeling out of AB tests
+optimizing the reg funnel
+discovery moments - activation or in app messaging, idea of moving people to more valuable engagement with addressable tvms
+state where user exudes desired engagement and behaviors
+back end pipelines don't exist and can't act upon - current grey areas
+
+VOD/Home 
+carousel ordering - home page and jupiter (intl) may have home as default
+end cards
+impact of changes and what does it mean for Pluto
+future state vision - hesitancy about dropping into live.  
+
+utilize personalization to make up for initial losses in tvms
+ok to lose some tvms or maus in the beginning
+theory on reg wall is gonna take a hit in tvms in maus
+
+don't go laid back - will lose maus
+low value tvms initially, unhealthy for biz long term
+
+engagement from high value users with high intent
+we need to have the quality conversation, short term near term may be painful
+
+do you know cpms for tubi vs. pluto?  
+a lot goes into cpms with comparisons challenging
+a way to compare apples to apples
+higher quality viewing leads to better/higher monetization and yield?
+retention may also be a bigger impact
+
+keep making investments
+lost 15% of MAUs b/c of cont play
+relationship of CPMs, revenue, etc.  
+
+Allison :  not all users are created equal, new v rtn experience
+youtube tv, no new user experience
+
+improve experience to drive higher experience higher retention
+small dents will give big returns high returns long term
+
+low hanging fruit - churn 
+wrap up the projects
+
+1a. reg - modeling part
+b. funnel optimization
+
+vod landing exp
+questions tbd
+
+3. activation opt in session exp
+
+4. pairing of investments to long term revenue
+
+5. churn
+and follow ups
+
+
+

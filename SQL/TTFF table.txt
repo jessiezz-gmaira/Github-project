@@ -1,0 +1,74 @@
+CREATE OR REPLACE TABLE  "SANDBOX"."ANALYSIS_PRODUCT"."TTFF";
+
+
+//cluster by (app_name, month, active) as
+
+insert into "SANDBOX"."ANALYSIS_PRODUCT"."TTFF"
+with date as (
+    SELECT '2022-01-01'::date as start_dt,
+        '2022-01-31'::date as end_dt,
+        '2022-01-01'::date as month_end_dt)
+
+, x1 AS (
+    SELECT
+        biu.client_id
+        ,biu.session_id
+        ,dem.app_name
+        ,date_trunc('month',time_stamp)::date as month
+        ,client_first_seen_utc
+        ,case when utm_medium in ('searchintegration', 'ossearch', 'deeplink', 'textsearch', 'livetab', 'deviceguidesearch', 'contenttile') then 1
+            else 0 end as CFeed
+        ,min(case when event_name in ('appLaunch','sessionReset') then time_stamp end) as app_start_time
+        ,min(case when event_name in ('episodeStart', 'clipStart', 'cmImpression','cmPodBegin') then time_stamp end) as first_episode_time
+        ,min(case when upper(channel_id) = 'VOD' and event_name in ('episodeStart', 'clipStart', 'cmImpression','cmPodBegin') then time_stamp end) as first_VODepisode_time
+        ,datediff(milliseconds,app_start_time,first_episode_time)/1000 as TTFF
+    FROM
+        ODIN_PRD.RPT.BI_USER_ENGAGEMENT360          biu
+        LEFT JOIN ODIN_PRD.STG.DEVICE_MAPPING       dem ON dem.sub_app_name = biu.app_name 
+        LEFT JOIN ODIN_PRD.RPT.ALL_CLIENT_FIRST_SEEN  fs on fs.client_id = biu.client_id
+    WHERE
+        time_stamp::date between (select start_dt from date) and (select end_dt from date)
+//  '2022-09-01' and '2022-11-30'
+        AND LOWER(biu.country) = 'us'
+        AND lower(dem.platform) in ('ctv','mobile')
+          and LOWER(biu.app_name) in ('androidmobile', 'cricket','firetablet','androidtv', 'sonytv','comcastx1', 'xclasstv', 'contour', 'firetv', 'googletv', 'lgwebos', 
+                                      'playstation', 'playstation 3', 'playstation 4', 'playstation 5', 'ps5', 'roku', 'samsungorsay', 'samsungtizen', 'blueridge', 'cableco',
+                                      'cableco11', 'cableco3', 'mediacom', 'na', 'tivo', 'androidtvtivo', 'androidtvverizon', 'androidmobileverizon', 'firetvverizon', 
+                                      'stbverizon', 'viziosmartcast', 'viziovia2.x', 'viziovia3.x', 'xboxone')
+  and event_name in ('appLaunch','sessionReset', 'episodeStart', 'clipStart', 'cmImpression','cmPodBegin')
+    GROUP BY 1,2,3,4,5,6
+    ORDER BY 1,3
+)
+
+, active as 
+    (SELECT
+        agg.client_id
+        ,agg.session_id
+        ,app_name
+        ,date_trunc('month',utc)::date as month
+    FROM
+         ODIN_PRD.RPT.ALL_HOURLY_TVS_AGG           agg
+        JOIN ODIN_PRD.DW_ODIN.HOUR_DIM             hr on agg.hour_sid = hr.hour_sid
+    WHERE
+        date_trunc('month',utc) between (select start_dt from date) and (select month_end_dt from date))
+
+SELECT a.client_id
+    ,a.session_id
+    ,a.app_name
+    ,a.month
+    ,app_start_time
+//    ,case when first_episode_time = first_VODepisode_time then 1 else 0 end as VOD
+    ,first_episode_time
+    ,TTFF
+    , case when b.session_id is null then 0 else 1 end as active
+    , cfeed
+    , case when client_first_seen_utc = app_start_time then 1 else 0 end as first_session
+    ,client_first_seen_utc
+        
+FROM x1 a LEFT JOIN active b on a.client_id = b.client_id and a.session_id = b.session_id
+        and a.month = b.month
+WHERE TTFF >=0
+    AND app_start_time is not null
+    AND first_episode_time is not null
+    AND TTFF <= 60
+    group by 1,2,3,4,5,6,7,8,9,10,11

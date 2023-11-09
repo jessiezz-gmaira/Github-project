@@ -1,0 +1,20 @@
+git-scm.com/download/win
+
+git config --global core.editor "'C:/Program Files/Notepad++/notepad++.exe' -multiInst -notabbar -nosession -noPlugin"
+
+create directory once in correct folder
+git init
+
+ls
+ls -la
+
+git add .
+git commit -m "text to describe changes"
+
+
+git log
+git log --since=2022-01-01
+git log --author="G"
+git log --grep="Init"
+
+git diff

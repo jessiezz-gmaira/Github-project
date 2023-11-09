@@ -1,0 +1,25 @@
+
+[api]
+account: 735329
+token: Bearer 2627664.pt.WglfJMC3vkjF7HFTHrcFNRe-1GMUsHCruAjaEne4HZXiOVcrTUMYjlPItnfhcy9olGudjLUzWRwGDaPrq8h-Hg
+
+[harvest]
+email: xxx
+pswd: xxx
+
+
+[Zoho]
+email2: xxx
+pswd2: xxx
+
+
+[SF]
+user: gmaira
+pswd: xxx
+
+
+
+clientID d8ab7109-a637-49f8-a78d-598b42c45d64
+
+session d21973a3-f27a-11ec-8ae4-0242ac110003
+

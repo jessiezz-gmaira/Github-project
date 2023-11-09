@@ -1,0 +1,49 @@
+Drop table "SANDBOX"."PRODUCT"."All_sessions_Fy23"
+Create table "SANDBOX"."PRODUCT"."All_sessions_Fy23" as 
+(
+with event_rank as
+(
+    select distinct session_id
+        , client_id
+		, app_name
+    from ODIN_PRD.RPT.BI_USER_ENGAGEMENT360
+    where date_trunc('DAY', time_stamp) >='2023-07-01' and date_trunc('DAY', time_stamp) <= '2023-07-10'
+        and event_name in ('appLaunch','sessionReset') 
+        and country in  ('US')
+)
+select * from event_rank) 
+
+
+create table SANDBOX.PRODUCT.Active_sessions_Table_2023 as 
+  (
+select a.Client_ID,a.Session_ID,a.Episode_ID,a.TOTAL_VIEWING_MINUTES,a.APP_NAME,a.VIDEO_SEGMENT_BEGIN_UTC
+from ODIN_PRD.RPT.ALL_HOURLY_TVS_AGG a 
+where date_trunc('DAY', a.VIDEO_SEGMENT_BEGIN_UTC) >= '2023-07-01' and date_trunc('DAY', a.VIDEO_SEGMENT_BEGIN_UTC) <='2023-07-10'
+and country in  ('US')) 
+
+
+with temp1 as
+(
+select APP_NAME,Session_ID,sum(TOTAL_VIEWING_MINUTES) as TVM
+from SANDBOX.PRODUCT.Active_sessions_Table_2023
+group by 1,2
+)
+
+select a.app_name,
+case 
+when TVM is NULL then  'Inactive_Sessions'
+when TVM >= 0 and TVM <1 then '01.session less than a minute'
+ when TVM >= 1 and TVM <= 3 then '02.session between 1-3'
+ when TVM > 3  and TVM<=6 then '03.session between 4-6'
+when TVM > 6  and TVM<=9 then '04.session between 7-9'
+when TVM > 9  and TVM<=12 then '05.session between 10-12'
+when TVM > 12  and TVM<=15 then '06.session between 13-15'
+when TVM > 15  and TVM<=18 then '07.session between 16-18'
+when TVM > 18  and TVM<=21 then '08.session between 19-21'
+else '09.>21 mins' end TVM_Minutes_Segmentation,count(distinct a.Session_ID) as sessions
+from "SANDBOX"."PRODUCT"."All_sessions_Fy23" a 
+left join temp1 b 
+on a.session_ID = b.Session_ID
+where lower(a.app_name) in ('androidmobile','androidtv','androidtvtivo','androidtvverizon','catalyst','chromebook','comcastx1','contour','cricket','firetablet','firetv','firetvverizon','googletv','hisense
+','ios','lgwebos','lifefitness','nowtv','oculus','ps5','roku','samsungtizen','stbverizon','tivo','tvos','windows','xboxone')
+group by 1 ,2

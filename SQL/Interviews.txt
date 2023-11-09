@@ -1,0 +1,92 @@
+technical
+stats or math
+communication
+creativity/problem solving
+team fit - industry interest
+tenacity
+
+
+
+Developing accurate SQL queries end to end and conduct query analysis to develop insights on platform content, devices and user performance
+
+Analyzing historical data and apply statistical analysis on KPIs for daily, weekly and monthly reporting
+
+Create key strategic decks and analyses from end to end, distill large sums of date into accurate insights and actionable recommendations
+
+Leveraging Excel and Tableau to distill data findings into actionable recommendations, formatting compelling data visualizations for presentation with stakeholders
+
+Consistently producing clear, compelling, accurate insights to inform business decisions in a timely, deadline-driven manner Business Intelligence Sr Analyst, Content & Programming We believe the right individual will possess these skills and experiences:
+5+ years of relevant experience in a Business Intelligence role, preferably with a focus on content and/or programming
+
+
+Knowledge of streaming media, digital advertising, operation reporting processes are a plus
+Ability to think critically and provide accurate work
+Experience working with other analysts in a collaborative team environment, and supporting standard methodologies
+Ability to collaborate with team members and managers on projects, communicating any blockers and asking for assistance throughout the analysis lifecycle
+Managing time effectively to meet business deadlines
+
+
+What attracted you to analytics roles?
+ What do you believe Business Intelligence means? 
+ - data collection
+ - data retrieval
+ - generating reports generated and compiled by team for exec for decision making
+
+What is your favorite aspect of the business intelligence process?
+_________________
+Hiring managers ask this question when trying to learn why you are passionate about the job. Your answer reveals not only your attraction to business intelligence but also the specific job at this company. Elaborate on your growth as a business intelligence analyst and how it contributed to your interest in the field.
+
+Example: "My favorite aspect of the business intelligence process is analyzing customer behavior. The data I collect allows me to truly understand the business's customers, their dislikes, likes and needs. Data is the quantitative proof of conclusions I draw as a business analyst. I enjoy the reliability of this information and how it informs me about our customer base."
+_____________________
+Can you tell me about a time when your data required a business to make significant changes?
+This question focuses on a more difficult aspect of the business intelligence analyst: conflict and major change. Answer this question by demonstrating your critical-thinking skills and patience. Identify the specific problem and explain what led to change. Describe your approach to respectfully sharing your data and suggesting alternatives.
+
+Example: "When I was working as a business intelligence analyst at a marketing firm, I collected data on the performance of our client online advertising. At the end of the quarter, I noticed that our engagement declined, and we also weren't gaining new customers.
+
+I decided to research this data further and investigate how our marketing strategies were not producing results. I then shared my observations with the management team to discuss how to introduce more effective advertising. After I presented this data collection, the business decided to expand its social media accounts. In two weeks, we saw an increase in sales."
+
+_____________________What data collection software do you use?
+What is your procedure for collecting data?
+What is your experience with qualitative and quantitative research?
+What three traits do you think are necessary to have as a business intelligence analyst?
+What advice would you give to a new business intelligence analyst?
+How much experience do you have presenting data?
+How is your approach to business intelligence different than other analysts?
+How do you explain business intelligence concepts to people outside your field?
+What do you find the most challenging aspect of being a business intelligence analyst?
+Can you define risk management and describe its process?
+What do you consider to be the most valuable business course you took?
+
+Why are you interested in this job?
+What do you know about our company?
+What do you enjoy about being a business intelligence analyst?
+Why do you think a business intelligence analyst is important?
+What do you consider your strengths and why?
+What do you consider your weaknesses and why?
+How well do you work in a team?
+What do you enjoy the most about your workday?
+What are some projects you completed?
+How would you define the role of a business intelligence analyst?
+Where do you see yourself five years from now?
+
+Q4. What are your favorite business intelligence tools?
+
+Be sure you're comfortable talking about your favorite tools. Some of the most common include Tableau, IBM Cognos Analytics, Oracle Business Intelligence Enterprise Edition. This type of question isn't just looking for what you like, but also why you like it. Give some concrete examples.
+
+One tip: Familiarize yourself with the tools cited in the job outreach. You can even refer back to that: "I saw that you were looking for a candidate with experience in Tableau, which is great because that's one of my favorite tools..."
+
+Q5. What is a data mart? Why might you consider using one?
+
+A data mart is used to store a subset of a company's data, for example, data for a specific department or activity type (e.g. marketing). This is really helpful for large enterprise businesses that have many different business concerns. A key reason to use this would be better performance, as a narrower volume of data will result in better processing speed.
+
+How Do You Handle Project Failures?
+Your response should help the interviewer see how you handle failures and disappointments. It is very important to understand that as a BI analyst, you will make some mistakes throughout your career. What’s important is how you handle those mistakes. Your potential employer should be able to see that you can bounce back from failures and come back stronger.
+
+A good answer to this question is, “Mistakes, however damaging, are inevitable and when I make mistakes, I do my best to resolve the issue and make sure I apply any lessons learned in future projects.”
+
+Do You See Yourself as a Team Leader or Project Manager in the Future?
+The purpose of this question is to test your leadership skills and see how efficiently you can work as a team leader. It will also help the interviewer see how ambitious you are and whether you can contribute to the company long-term. If you are great with leadership roles, your answer should convince the interviewer that you are open to it and can do well at it.
+
+How Do You Keep Yourself Updated on the Latest Business Trends?
+To answer this question, you should talk about industry events and conferences that you attend and make reference to the latest news and industry publications you’re familiar with. This will show the interviewer that you keep yourself up to date and connected with peers in the field of business intelligence.
+

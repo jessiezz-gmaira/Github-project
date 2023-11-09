@@ -1,0 +1,159 @@
+/*Create Viewership Pattern Table*/
+--Added Unique Days and Day Percentage
+USE DATABASE SANDBOX;
+USE SCHEMA ANALYSIS_PRODUCT;
+CREATE OR REPLACE TRANSIENT TABLE VIEWERSHIP_PATTERNS (
+    client_id varchar(255) default NULL, 
+    month DATE default NULL,
+    avg_days_apart number(10,2) default NULL,
+    avg_session_duration number (10,2) default NULL,
+    monthly_avg_session_duration number(10,2) default NULL,
+    frequency number(10,2) default NULL,
+    monthly_frequency number(10,2) default NULL,
+    unique_days number (10,2) default NULL,
+    day_percent number (10,2) default NULL
+)
+;
+
+INSERT INTO SANDBOX.ANALYSIS_PRODUCT.VIEWERSHIP_PATTERNS(client_id, month, avg_days_apart, avg_session_duration, monthly_avg_session_duration, frequency, monthly_frequency, unique_days, day_percent)
+with days_between_calc_1 as (
+select distinct client_id
+, date_trunc('day', video_segment_begin_utc) as date_time
+FROM "ODIN_PRD"."RPT"."ALL_HOURLY_TVS_AGG"
+where date_trunc('day', video_segment_begin_utc) between '2022-01-01' and '2022-05-31'
+and timeline_aligned_flag = TRUE
+and geo_aligned_flag = TRUE
+and ep_sources_aligned_flag = TRUE 
+and lower(app_name) in ('roku')
+and lower(country) in ('us')
+),
+
+days_between_calc_2 as (
+SELECT distinct client_id, date_time, LAG(date_time) 
+  OVER (PARTITION BY client_id ORDER BY date_time asc) as priordate
+  from days_between_calc_1
+),
+
+days_between_calc_3 as (
+select distinct client_id
+, AVG(DATEDIFF(DAY, priordate, date_time)) as avg_lag
+from days_between_calc_2
+group by 1),
+
+days_visited_calc as (
+select distinct client_id
+, date_trunc('month', date_time) as month
+, count(distinct(date_time)) as unique_days
+, datediff('day', month, last_day(date_time, 'month')+1) as total_days
+, unique_days / total_days as day_percent
+from days_between_calc_1
+group by 1,2,4),
+
+session_month_table as (
+select
+distinct client_id
+, date_trunc('month', video_segment_begin_utc) as month 
+, session_id
+, sum(total_viewing_minutes) as duration 
+from "ODIN_PRD"."RPT"."ALL_HOURLY_TVS_AGG"
+where date_trunc('day', video_segment_begin_utc) between '2022-01-01' and '2022-05-31'
+and timeline_aligned_flag = TRUE
+and geo_aligned_flag = TRUE
+and ep_sources_aligned_flag = TRUE 
+and lower(app_name) in ('roku')
+and lower(country) in ('us')
+group by 1,2,3
+),
+
+session_month_table_calc as (
+select
+distinct client_id
+, month
+, count(distinct(session_id)) as monthly_frequency
+, avg(duration) as monthly_avg_session_duration
+from session_month_table
+group by 1,2
+),
+
+session_agg_table as (
+select
+distinct client_id
+, session_id
+, sum(total_viewing_minutes) as duration 
+from "ODIN_PRD"."RPT"."ALL_HOURLY_TVS_AGG"
+where date_trunc('day', video_segment_begin_utc) between '2022-01-01' and '2022-05-31'
+and timeline_aligned_flag = TRUE
+and geo_aligned_flag = TRUE
+and ep_sources_aligned_flag = TRUE 
+and lower(app_name) in ('roku')
+and lower(country) in ('us')
+group by 1,2
+),
+
+session_agg_table_calc as (
+select
+distinct client_id
+, count(distinct(session_id)) as frequency
+, avg(duration) as avg_session_duration
+from session_agg_table
+group by 1
+)
+
+select 
+distinct(a.client_id)
+, b.month
+, round(avg_lag, 2) as avg_days_apart
+, avg_session_duration
+, monthly_avg_session_duration
+, frequency
+, monthly_frequency
+, unique_days
+, day_percent
+from days_between_calc_3 a
+join session_month_table_calc b on a.client_id = b.client_id
+join session_agg_table_calc c on a.client_id = c.client_id
+join days_visited_calc d on b.client_id = d.client_id and b.month = d.month
+group by 1,2,3,4,5,6,7,8,9
+order by 1,2,3,4,5,6,7,8,9;
+
+
+
+/*Create Table that Joins User Segmentation to Viewership Patterns*/
+USE DATABASE SANDBOX;
+USE SCHEMA ANALYSIS_PRODUCT;
+CREATE OR REPLACE TRANSIENT TABLE USER_SEGMENTATIONS_VIEWERSHIP_PATTERN_EXT (
+    client_id varchar(255) default NULL, 
+    month DATE default NULL,
+    tvm_cohort varchar(20) default NULL, 
+    tenure_cohort varchar(20) default NULL,
+    most_watched_channel varchar(255) default NULL,
+    most_watched_category varchar(255) default NULL,
+    total_tvms number(10,5) default NULL,
+    avg_days_apart number(10,2) default NULL,
+    avg_session_duration number (10,2) default NULL,
+    monthly_avg_session_duration number(10,2) default NULL,
+    frequency number(10,2) default NULL,
+    monthly_frequency number(10,2) default NULL,
+    unique_days number (10,2) default NULL,
+    day_percent number (10,2) default NULL
+)
+;
+
+INSERT INTO SANDBOX.ANALYSIS_PRODUCT.USER_SEGMENTATIONS_VIEWERSHIP_PATTERN_EXT(client_id, month, tvm_cohort, tenure_cohort, most_watched_channel, most_watched_category, total_tvms, avg_days_apart, avg_session_duration, monthly_avg_session_duration, frequency, monthly_frequency, unique_days, day_percent)
+select 
+a.client_id
+, a.month
+//, a.tvm_cohort
+//, a.tenure_cohort
+//, a.most_watched_channel
+//, a.most_watched_category
+, a.total_tvms
+//, b.avg_days_apart
+//, b.avg_session_duration
+, b.monthly_avg_session_duration
+//, b.frequency  
+//, b.monthly_frequency
+, b.unique_days
+//, day_percent
+from "SANDBOX"."ANALYSIS_PRODUCT"."USER_SEGMENTATIONS" a
+join "SANDBOX"."ANALYSIS_PRODUCT"."VIEWERSHIP_PATTERNS" b on a.client_id=b.client_id and a.month=b.month;
